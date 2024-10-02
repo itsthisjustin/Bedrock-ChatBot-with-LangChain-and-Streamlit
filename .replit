@@ -1,0 +1,12 @@
+modules = ["python-3.12"]
+run = "streamlit run bedrock/bedrock_chatbot.py"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "streamlit run bedrock/bedrock_chatbot.py"]
+
+[[ports]]
+localPort = 8501
+externalPort = 80
