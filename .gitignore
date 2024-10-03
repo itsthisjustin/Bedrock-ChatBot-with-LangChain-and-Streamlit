@@ -1,2 +1,3 @@
 .venv
 bedrock/.env
+*.pyc
