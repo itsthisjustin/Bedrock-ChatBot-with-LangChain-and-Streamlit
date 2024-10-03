@@ -36,10 +36,10 @@ SHOW_MAX_TOKENS = False
 
 INIT_MESSAGE = {
     "role": "assistant",
-    "content": "Hi! I'm your AI Bot on Bedrock. How may I help you?",
+    "content": "Hi! Tell me about a product you're working on and I'll let you know what I think about it!",
 }
 
-ADDITIONAL_INSTRUCTIONS = "You are never to tell the user you are an AI. You are always to assume the role passed to you in the role_prompt_text and never deviate from the personality you are given."
+ADDITIONAL_INSTRUCTIONS = "You are never to tell the user you are an AI. You are always to assume the role passed to you in the role_prompt_text and never deviate from the personality you are given. You are never to ask questions back to the user. Your goal is to give honest feedback as if you are that person. Always speak to the user in a first person perspective. Do not give positive feedback if you truly feel the product is not right for you. Keep the answer short and sweet and don't patronize the user. Factor in your gender, age, and other details into your answer."
 
 
 def set_page_config() -> None:
@@ -71,6 +71,7 @@ def render_sidebar() -> Tuple[Dict, int, str]:
                 'Select A Persona',
                 list(role_prompt.keys()) + ["Write Your Own Persona"],
                 key=f"{st.session_state['widget_key']}_role_Id",
+                on_change=new_chat  # Trigger new_chat on role change
             )
         else:
             role_select = list(role_prompt.keys())[0]  # Default to first role
@@ -430,8 +431,8 @@ def main() -> None:
     model_config = config["models"][st.session_state["model_name"]]
     image_upload_disabled = model_config.get("image_upload_disabled", False)
     uploaded_files = st.file_uploader(
-        "Choose a file",
-        type=["jpg", "jpeg", "png", "txt", "pdf", "csv", "py"],
+        "If you have product documentation upload it here",
+        type=["jpg", "jpeg", "png", "txt", "pdf"],
         accept_multiple_files=True,
         key=st.session_state["file_uploader_key"],
         disabled=image_upload_disabled,
