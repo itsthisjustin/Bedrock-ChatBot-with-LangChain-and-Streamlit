@@ -16,6 +16,7 @@ from langchain_community.vectorstores import FAISS
 from PIL import Image, UnidentifiedImageError
 import pdfplumber
 import langsmith
+from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 from langchain.schema.runnable import RunnableConfig
 
@@ -94,6 +95,16 @@ def render_sidebar() -> Tuple[Dict, int, str]:
                 key=f"{st.session_state['widget_key']}_role_Id",
                 on_change=new_chat  # Trigger new_chat on role change
             )
+            # Initialize Langfuse client
+            langfuse = Langfuse()
+
+            # Fetch the prompt based on the selected role
+            if role_select in role_prompt:
+                prompt = langfuse.get_prompt(role_select)  # Fetch prompt text
+                role_prompt_text = prompt.prompt  # Use fetched prompt text
+            else:
+                role_prompt_text = ""  # Default to empty if not found
+
         else:
             role_select = list(role_prompt.keys())[0]  # Default to first role
 
