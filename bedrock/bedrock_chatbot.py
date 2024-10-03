@@ -19,6 +19,7 @@ import langsmith
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 from langchain.schema.runnable import RunnableConfig
+from langchain_core.prompts import ChatPromptTemplate
 
 from dotenv import load_dotenv
 
@@ -30,9 +31,9 @@ from bedrock_embedder import index_file, search_index
 # Load the env variables
 load_dotenv()
 
-
+# Initialize Langfuse
+langfuse = Langfuse()
 langfuse_handler = CallbackHandler(
-
     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
     host=os.getenv("LANGFUSE_HOST")
@@ -100,18 +101,18 @@ def render_sidebar() -> Tuple[Dict, int, str]:
                 on_change=new_chat  # Trigger new_chat on role change
             )
 
-            # Initialize Langfuse client
-            langfuse = Langfuse()
-
             # Determine the role prompt text
             if role_select == "Write Your Own Persona":
                 role_prompt_text = ""  # Default to empty for custom input
+                langfuse_prompt = None
             elif role_select in displayed_roles:
                 original_role = original_roles[displayed_roles.index(role_select)]  # Get original role
-                prompt = langfuse.get_prompt(original_role)  # Fetch prompt text
-                role_prompt_text = prompt.prompt  # Use fetched prompt text
+                # Fetch the role prompt text from Langfuse
+                langfuse_prompt = langfuse.get_prompt(original_role)  # Fetch the prompt object
+                role_prompt_text = langfuse_prompt.prompt  # Use fetched prompt text
             else:
                 role_prompt_text = ""  # Default to empty if not found
+                langfuse_prompt = None
         else:
             role_select = list(role_prompt.keys())[0]  # Default to first role
 
@@ -199,25 +200,33 @@ def render_sidebar() -> Tuple[Dict, int, str]:
         "max_tokens": max_tokens
     }
 
-    return model_kwargs, system_prompt, web_local
+    return model_kwargs, system_prompt, web_local, langfuse_prompt
 
 
 def init_runnablewithmessagehistory(
         system_prompt: str,
-        chat_model: ChatModel) -> RunnableWithMessageHistory:
+        chat_model: ChatModel,
+        langfuse_prompt) -> RunnableWithMessageHistory:
     """
     Initialize the RunnableWithMessageHistory with the given parameters.
     """
     combined_prompt = f"{ADDITIONAL_INSTRUCTIONS}\n\n{system_prompt}"
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", combined_prompt),
-        MessagesPlaceholder(variable_name="chat_history"),
-        MessagesPlaceholder(variable_name="query"),
-    ])
+    # Create the ChatPromptTemplate and set metadata
+    langchain_chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", combined_prompt),
+            MessagesPlaceholder(variable_name="chat_history"),
+            MessagesPlaceholder(variable_name="query"),
+        ]
+    )
+    
+    # Only set the metadata if we have a valid Langfuse prompt
+    if langfuse_prompt:
+        langchain_chat_prompt.metadata = {"langfuse_prompt": langfuse_prompt}
 
     chain = (
-        prompt | chat_model.llm | StrOutputParser()
+        langchain_chat_prompt | chat_model.llm | StrOutputParser()
     ).with_config(RunnableConfig(callbacks=[langfuse_handler]))
 
     msgs = StreamlitChatMessageHistory()
@@ -457,10 +466,10 @@ def main() -> None:
     # Add a button to start a new chat
     st.sidebar.button("Start New Session", on_click=new_chat, type="primary")
 
-    model_kwargs, system_prompt, web_local = render_sidebar()
+    model_kwargs, system_prompt, web_local, langfuse_prompt = render_sidebar()
     chat_model = ChatModel(st.session_state["model_name"], model_kwargs)
     runnable_with_messagehistory = init_runnablewithmessagehistory(
-        system_prompt, chat_model)
+        system_prompt, chat_model, langfuse_prompt)
 
     # Image uploader
     if "file_uploader_key" not in st.session_state:
