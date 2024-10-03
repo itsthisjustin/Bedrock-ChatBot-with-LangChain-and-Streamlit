@@ -89,28 +89,32 @@ def render_sidebar() -> Tuple[Dict, int, str]:
                 config["models"].keys())[0]  # Default to first model
 
         if SHOW_ROLE_SELECT:
+            # Create a mapping of displayed roles to original roles
+            displayed_roles = [role.replace('.', ' ') for role in role_prompt.keys()]
+            original_roles = list(role_prompt.keys())
+
             role_select = st.selectbox(
                 'Select A Persona',
-                list(role_prompt.keys()) + ["Write Your Own Persona"],
+                displayed_roles + ["Write Your Own Persona"],
                 key=f"{st.session_state['widget_key']}_role_Id",
                 on_change=new_chat  # Trigger new_chat on role change
             )
+
             # Initialize Langfuse client
             langfuse = Langfuse()
 
-            # Fetch the prompt based on the selected role
-            if role_select in role_prompt:
-                prompt = langfuse.get_prompt(role_select)  # Fetch prompt text
+            # Determine the role prompt text
+            if role_select == "Write Your Own Persona":
+                role_prompt_text = ""  # Default to empty for custom input
+            elif role_select in displayed_roles:
+                original_role = original_roles[displayed_roles.index(role_select)]  # Get original role
+                prompt = langfuse.get_prompt(original_role)  # Fetch prompt text
                 role_prompt_text = prompt.prompt  # Use fetched prompt text
             else:
                 role_prompt_text = ""  # Default to empty if not found
-
         else:
             role_select = list(role_prompt.keys())[0]  # Default to first role
 
-        # Set the initial value of the text area based on the selected role
-        role_prompt_text = "" if role_select == "Write Your Own Persona" else role_prompt.get(
-            role_select, "")
         st.session_state["model_name"] = model_name_select
 
         model_config = config["models"][model_name_select]
