@@ -4,12 +4,12 @@ import numpy as np
 import os
 import errno
 from langchain_community.vectorstores import FAISS  
-from langchain_community.embeddings import BedrockEmbeddings  
+from langchain_aws import BedrockEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter  
 import PyPDF2
 
 # Create a global variable for the embeddings
-EMBEDDINGS = BedrockEmbeddings(model_id="cohere.embed-english-v3")  
+EMBEDDINGS = BedrockEmbeddings(model_id="amazon.titan-embed-text-v2:0")  
 
 def read_file(file):
     if file.type == "application/pdf":  
