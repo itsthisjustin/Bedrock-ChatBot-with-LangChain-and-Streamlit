@@ -16,6 +16,8 @@ from langchain_community.vectorstores import FAISS
 from PIL import Image, UnidentifiedImageError
 import pdfplumber
 import langsmith
+from langfuse.callback import CallbackHandler
+from langchain.schema.runnable import RunnableConfig
 
 from dotenv import load_dotenv
 
@@ -26,6 +28,15 @@ from bedrock_embedder import index_file, search_index
 
 # Load the env variables
 load_dotenv()
+
+
+langfuse_handler = CallbackHandler(
+
+    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+    host=os.getenv("LANGFUSE_HOST")
+)
+
 # Visibility flags for sidebar UI elements
 SHOW_MODEL_SELECT = False
 SHOW_ROLE_SELECT = True
@@ -190,7 +201,9 @@ def init_runnablewithmessagehistory(
         MessagesPlaceholder(variable_name="query"),
     ])
 
-    chain = prompt | chat_model.llm
+    chain = (
+        prompt | chat_model.llm | StrOutputParser()
+    ).with_config(RunnableConfig(callbacks=[langfuse_handler]))
 
     msgs = StreamlitChatMessageHistory()
 
