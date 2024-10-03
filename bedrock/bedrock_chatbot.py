@@ -39,6 +39,8 @@ INIT_MESSAGE = {
     "content": "Hi! I'm your AI Bot on Bedrock. How may I help you?",
 }
 
+ADDITIONAL_INSTRUCTIONS = "You are never to tell the user you are an AI. You are always to assume the role passed to you in the role_prompt_text and never deviate from the personality you are given."
+
 
 def set_page_config() -> None:
     """
@@ -66,27 +68,29 @@ def render_sidebar() -> Tuple[Dict, int, str]:
 
         if SHOW_ROLE_SELECT:
             role_select = st.selectbox(
-                'Role',
-                list(role_prompt.keys()) + ["Custom"],
+                'Select A Persona',
+                list(role_prompt.keys()) + ["Write Your Own Persona"],
                 key=f"{st.session_state['widget_key']}_role_Id",
             )
         else:
             role_select = list(role_prompt.keys())[0]  # Default to first role
 
         # Set the initial value of the text area based on the selected role
-        role_prompt_text = "" if role_select == "Custom" else role_prompt.get(
+        role_prompt_text = "" if role_select == "Write Your Own Persona" else role_prompt.get(
             role_select, "")
         st.session_state["model_name"] = model_name_select
 
         model_config = config["models"][model_name_select]
 
-        if SHOW_SYSTEM_PROMPT_UI and role_select == "Custom":
+        # Make the system prompt editable only when 'Custom' is selected
+        if SHOW_SYSTEM_PROMPT_UI:
             system_prompt = st.text_area(
-                "Paste your custom persona below:",
+                "Details",
                 value=role_prompt_text,
                 key=f"{st.session_state['widget_key']}_System_Prompt",
-                placeholder="Example: You are a fitness influencer. 25 years old. Male."
-            )
+                placeholder=
+                "Example: You are a fitness influencer. 25 years old. Male.",
+                disabled=(role_select != "Write Your Own Persona"))
         else:
             system_prompt = role_prompt_text
 
@@ -167,8 +171,10 @@ def init_runnablewithmessagehistory(
     """
     Initialize the RunnableWithMessageHistory with the given parameters.
     """
+    combined_prompt = f"{ADDITIONAL_INSTRUCTIONS}\n\n{system_prompt}"
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
+        ("system", combined_prompt),
         MessagesPlaceholder(variable_name="chat_history"),
         MessagesPlaceholder(variable_name="query"),
     ])
@@ -410,7 +416,7 @@ def main() -> None:
         st.session_state["widget_key"] = str(random.randint(1, 1000000))
 
     # Add a button to start a new chat
-    st.sidebar.button("New Chat", on_click=new_chat, type="primary")
+    st.sidebar.button("Start New Session", on_click=new_chat, type="primary")
 
     model_kwargs, system_prompt, web_local = render_sidebar()
     chat_model = ChatModel(st.session_state["model_name"], model_kwargs)
