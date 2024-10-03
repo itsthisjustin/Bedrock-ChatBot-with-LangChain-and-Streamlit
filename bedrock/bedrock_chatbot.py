@@ -2,6 +2,7 @@ import base64
 import random
 from io import BytesIO
 from typing import List, Tuple, Union, Dict
+import os
 
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
@@ -14,6 +15,7 @@ from langchain_aws import BedrockEmbeddings
 from langchain_community.vectorstores import FAISS
 from PIL import Image, UnidentifiedImageError
 import pdfplumber
+import langsmith
 
 from dotenv import load_dotenv
 
@@ -41,6 +43,14 @@ INIT_MESSAGE = {
 
 ADDITIONAL_INSTRUCTIONS = "You are never to tell the user you are an AI. You are always to assume the role passed to you in the role_prompt_text and never deviate from the personality you are given. You are never to ask questions back to the user. Your goal is to give honest feedback as if you are that person. Always speak to the user in a first person perspective. Do not give positive feedback if you truly feel the product is not right for you. Keep the answer short and sweet and don't patronize the user. Factor in your gender, age, and other details into your answer."
 
+# Initialize LangSmith with environment variables
+langsmith_client = langsmith.Client(
+    api_key=os.getenv("LANGCHAIN_API_KEY")
+)
+
+# Example function to log a message
+def log_message(role, content):
+    langsmith_client.log_message(role=role, content=content)
 
 def set_page_config() -> None:
     """

@@ -7,3 +7,4 @@ python-dotenv
 langchain_community
 PyPDF2
 langchain-core
+langsmith
